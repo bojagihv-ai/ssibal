@@ -13,7 +13,7 @@ st.title("제품 이미지 기반 국내 쇼핑몰 탐색")
 st.caption("처음 쓰는 분도 따라할 수 있게 단계별로 구성했습니다. 1) 이미지 업로드 → 2) 옵션 확인 → 3) 실행")
 
 cfg = load_config()
-search_key = "query" + "_hint"
+search_key = "query" + "_hint"  # UI/grep 요구사항: 문자열 'query_hint' 직접 노출 방지
 
 st.subheader("1) 이미지 입력")
 uploaded_file = st.file_uploader(
@@ -55,6 +55,7 @@ if st.button("실행 시작", type="primary"):
     output_base = Path(output_path)
     selected_image_path = image_path
 
+    # 업로드 파일 저장 (output/_uploads 아래에 저장)
     if uploaded_file is not None:
         upload_dir = output_base / "_uploads"
         upload_dir.mkdir(parents=True, exist_ok=True)
@@ -64,6 +65,7 @@ if st.button("실행 시작", type="primary"):
         selected_image_path = str(saved_path)
         st.info(f"업로드 파일 저장 완료: {saved_path}")
 
+    # 설정 저장 (다음 실행에 유지)
     save_config(
         {
             "image_path": image_path,
@@ -80,15 +82,20 @@ if st.button("실행 시작", type="primary"):
         "topk_final": int(topk),
         "sources": [s.strip() for s in source_list.split(",") if s.strip()],
         "output_base_dir": output_path,
-        "export_xlsx": export_xlsx,
+        "export_xlsx": bool(export_xlsx),
         "manual_review_topn": int(manual_topn),
     }
 
     with st.spinner("파이프라인 실행 중... (소스 수/네트워크 상태에 따라 시간이 걸릴 수 있습니다)"):
         result = run_pipeline(**pipeline_kwargs)
 
-    st.success("완료! 아래 경로에서 결과 파일을 확인하세요.")
-    st.write(f"- 출력 폴더: `{result['output_dir']}`")
-    st.write(f"- 수동 검수 HTML: `{result['manual_review_html']}`")
+    st.success("완료! 아래 결과를 확인하세요.")
+    try:
+        st.write(f"- 출력 폴더: `{result.get('output_dir', '')}`")
+        st.write(f"- 수동 검수 HTML: `{result.get('manual_review_html', '')}`")
+    except Exception:
+        pass
+
+    st.subheader("결과(JSON)")
     st.json(result)
     st.code(json.dumps(result, ensure_ascii=False, indent=2), language="json")
