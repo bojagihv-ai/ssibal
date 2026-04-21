@@ -1,0 +1,73 @@
+{
+  "version": "1.0",
+  "note": "cron_expression 형식: 분 시 일 월 요일 (0=일요일, 1=월요일 ... 5=금요일, 6=토요일)",
+  "cron_presets": {
+    "매시간":       "0 * * * *",
+    "매일_오전6시": "0 6 * * *",
+    "매일_오전9시": "0 9 * * *",
+    "매일_오전12시":"0 12 * * *",
+    "매일_오후6시": "0 18 * * *",
+    "매주_월요일":  "0 9 * * 1",
+    "매주_수요일":  "0 9 * * 3",
+    "매주_금요일":  "0 9 * * 5",
+    "매월_1일":     "0 9 1 * *"
+  },
+  "schedules": [
+    {
+      "category_id":     "fashion",
+      "category_name":   "패션/의류",
+      "cron_expression": "0 6 * * *",
+      "enabled":         true,
+      "description":     "매일 오전 6시 - 패션/의류 트렌드 빠른 파악"
+    },
+    {
+      "category_id":     "electronics",
+      "category_name":   "전자제품/디지털",
+      "cron_expression": "0 9 * * *",
+      "enabled":         true,
+      "description":     "매일 오전 9시 - 전자제품 신상/가격 변동 파악"
+    },
+    {
+      "category_id":     "food",
+      "category_name":   "식품/건강",
+      "cron_expression": "0 7 * * *",
+      "enabled":         true,
+      "description":     "매일 오전 7시 - 식품 신규 입고 및 할인 파악"
+    },
+    {
+      "category_id":     "beauty",
+      "category_name":   "뷰티/화장품",
+      "cron_expression": "0 8 * * *",
+      "enabled":         true,
+      "description":     "매일 오전 8시 - 뷰티 신제품 및 세일 파악"
+    },
+    {
+      "category_id":     "furniture",
+      "category_name":   "가구/인테리어",
+      "cron_expression": "0 10 * * 1",
+      "enabled":         true,
+      "description":     "매주 월요일 오전 10시 - 가구는 주간 업데이트로 충분"
+    },
+    {
+      "category_id":     "sports",
+      "category_name":   "스포츠/레저",
+      "cron_expression": "0 10 * * 3",
+      "enabled":         true,
+      "description":     "매주 수요일 오전 10시 - 스포츠용품 주간 점검"
+    },
+    {
+      "category_id":     "baby",
+      "category_name":   "육아/완구",
+      "cron_expression": "0 11 * * *",
+      "enabled":         true,
+      "description":     "매일 오전 11시 - 육아용품 신규 상품 파악"
+    },
+    {
+      "category_id":     "pet",
+      "category_name":   "반려동물",
+      "cron_expression": "0 11 * * 5",
+      "enabled":         true,
+      "description":     "매주 금요일 오전 11시 - 반려동물용품 주간 점검"
+    }
+  ]
+}

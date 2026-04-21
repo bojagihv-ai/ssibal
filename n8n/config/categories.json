@@ -1,0 +1,85 @@
+{
+  "version": "1.0",
+  "categories": [
+    {
+      "id": "fashion",
+      "name": "패션/의류",
+      "icon": "👗",
+      "description": "의류, 신발, 가방, 액세서리 등",
+      "keywords": ["패션 의류", "신발", "가방", "액세서리", "원피스", "티셔츠", "청바지"],
+      "malls": ["coupang", "naver", "gmarket", "elevenst", "ssg", "lotteon"],
+      "enabled": true
+    },
+    {
+      "id": "electronics",
+      "name": "전자제품/디지털",
+      "icon": "💻",
+      "description": "스마트폰, 노트북, 가전제품, 디지털 기기",
+      "keywords": ["스마트폰", "노트북", "이어폰", "가전제품", "태블릿", "카메라", "모니터"],
+      "malls": ["coupang", "naver", "gmarket", "elevenst", "ssg", "lotteon"],
+      "enabled": true
+    },
+    {
+      "id": "food",
+      "name": "식품/건강",
+      "icon": "🥗",
+      "description": "식재료, 건강식품, 간편식, 음료",
+      "keywords": ["건강식품", "간편식", "과자 음료", "커피", "유기농", "비타민", "단백질"],
+      "malls": ["coupang", "naver", "gmarket", "elevenst", "ssg", "lotteon"],
+      "enabled": true
+    },
+    {
+      "id": "beauty",
+      "name": "뷰티/화장품",
+      "icon": "💄",
+      "description": "화장품, 스킨케어, 헤어, 바디케어",
+      "keywords": ["화장품", "스킨케어", "마스크팩", "향수", "선크림", "립스틱", "헤어에센스"],
+      "malls": ["coupang", "naver", "gmarket", "elevenst", "ssg", "lotteon"],
+      "enabled": true
+    },
+    {
+      "id": "furniture",
+      "name": "가구/인테리어",
+      "icon": "🛋️",
+      "description": "가구, 생활용품, 인테리어 소품",
+      "keywords": ["가구", "소파", "책상 조명", "커튼", "침대", "수납장", "러그"],
+      "malls": ["coupang", "naver", "gmarket", "elevenst", "ssg", "lotteon"],
+      "enabled": true
+    },
+    {
+      "id": "sports",
+      "name": "스포츠/레저",
+      "icon": "🏋️",
+      "description": "운동기구, 아웃도어, 스포츠 의류 및 용품",
+      "keywords": ["운동기구", "요가매트", "등산용품", "자전거", "헬스용품", "수영용품", "캠핑"],
+      "malls": ["coupang", "naver", "gmarket", "elevenst", "ssg", "lotteon"],
+      "enabled": true
+    },
+    {
+      "id": "baby",
+      "name": "육아/완구",
+      "icon": "🍼",
+      "description": "유아용품, 장난감, 아동 의류",
+      "keywords": ["기저귀", "분유", "유모차", "장난감", "아동복", "젖병", "유아 침구"],
+      "malls": ["coupang", "naver", "gmarket", "elevenst", "ssg", "lotteon"],
+      "enabled": true
+    },
+    {
+      "id": "pet",
+      "name": "반려동물",
+      "icon": "🐾",
+      "description": "반려동물 사료, 용품, 의류",
+      "keywords": ["강아지사료", "고양이사료", "펫용품", "리드줄", "펫하우스", "펫의류", "간식"],
+      "malls": ["coupang", "naver", "gmarket", "elevenst", "ssg", "lotteon"],
+      "enabled": true
+    }
+  ],
+  "malls": [
+    { "id": "coupang",  "name": "쿠팡",       "endpoint": "coupang",  "url": "https://www.coupang.com" },
+    { "id": "naver",    "name": "네이버쇼핑", "endpoint": "naver",    "url": "https://search.shopping.naver.com" },
+    { "id": "gmarket",  "name": "G마켓",      "endpoint": "gmarket",  "url": "https://www.gmarket.co.kr" },
+    { "id": "11st",     "name": "11번가",     "endpoint": "elevenst", "url": "https://www.11st.co.kr" },
+    { "id": "ssg",      "name": "SSG닷컴",    "endpoint": "ssg",      "url": "https://www.ssg.com" },
+    { "id": "lotteon",  "name": "롯데온",     "endpoint": "lotteon",  "url": "https://www.lotteon.com" }
+  ]
+}

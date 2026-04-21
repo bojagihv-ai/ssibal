@@ -1,0 +1,88 @@
+services:
+  # ── n8n 워크플로우 엔진 ──────────────────────────────────────────────────────
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: shopping-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=Asia/Seoul
+      - TZ=Asia/Seoul
+      # 보안: 운영 시 변경 필요
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=changeme123
+      # 워크플로우 실행 로그 보관 기간 (일)
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=30
+      # 알림용 Slack Webhook (선택)
+      - N8N_VAR_SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/home/node/.n8n/workflows_import:ro
+    depends_on:
+      - crawler-api
+    networks:
+      - shopping-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5678/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── 크롤링 백엔드 API ────────────────────────────────────────────────────────
+  crawler-api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: shopping-crawler-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - TZ=Asia/Seoul
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - crawler_data:/app/data
+      - ./config:/app/config:ro
+    networks:
+      - shopping-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Streamlit 검색 UI ────────────────────────────────────────────────────────
+  streamlit-ui:
+    build:
+      context: ..
+      dockerfile: n8n/Dockerfile.streamlit
+    container_name: shopping-streamlit-ui
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    environment:
+      - TZ=Asia/Seoul
+      - CRAWLER_API_URL=http://crawler-api:8000
+    volumes:
+      - crawler_data:/app/data
+    depends_on:
+      - crawler-api
+    networks:
+      - shopping-net
+
+volumes:
+  n8n_data:
+    driver: local
+  crawler_data:
+    driver: local
+
+networks:
+  shopping-net:
+    driver: bridge

@@ -1,0 +1,147 @@
+{
+  "name": "02. 쇼핑몰 크롤러 - 카테고리 크롤러",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crawl-category",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b1b2c3d4-e5f6-7890-abcd-ef1234567801",
+      "name": "Webhook: 카테고리 크롤 요청",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [180, 400],
+      "webhookId": "shopping-category-crawler-v1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 요청 파라미터 파싱 및 쇼핑몰 목록 생성\nconst body = $input.first().json.body || {};\nconst categoryId = body.category_id || 'fashion';\nconst categoryName = body.category_name || '패션/의류';\nconst maxItems = body.max_items_per_mall || 30;\n\n// 카테고리별 검색 키워드 매핑\nconst KEYWORDS = {\n  fashion:     ['패션', '의류', '신발', '가방', '액세서리', '원피스', '티셔츠'],\n  electronics: ['스마트폰', '노트북', '이어폰', '가전제품', '태블릿', '카메라'],\n  food:        ['건강식품', '간편식', '과자', '음료', '커피', '유기농'],\n  beauty:      ['화장품', '스킨케어', '마스크팩', '향수', '선크림', '립스틱'],\n  furniture:   ['가구', '소파', '책상', '조명', '커튼', '침대'],\n  sports:      ['운동기구', '요가매트', '등산', '자전거', '수영', '헬스'],\n  baby:        ['기저귀', '분유', '유모차', '장난감', '아동복', '젖병'],\n  pet:         ['강아지사료', '고양이사료', '펫용품', '리드줄', '하우스']\n};\n\n// 크롤링 대상 쇼핑몰\nconst MALLS = [\n  { id: 'coupang',   name: '쿠팡',       endpoint: 'coupang' },\n  { id: 'naver',     name: '네이버쇼핑', endpoint: 'naver' },\n  { id: 'gmarket',   name: 'G마켓',      endpoint: 'gmarket' },\n  { id: '11st',      name: '11번가',     endpoint: 'elevenst' },\n  { id: 'ssg',       name: 'SSG닷컴',    endpoint: 'ssg' },\n  { id: 'lotteon',   name: '롯데온',     endpoint: 'lotteon' }\n];\n\nconst keywords = KEYWORDS[categoryId] || [categoryId];\n\nreturn MALLS.map(mall => ({\n  json: {\n    category_id: categoryId,\n    category_name: categoryName,\n    mall_id: mall.id,\n    mall_name: mall.name,\n    endpoint: mall.endpoint,\n    keywords,\n    primary_keyword: keywords[0],\n    max_items: maxItems\n  }\n}));"
+      },
+      "id": "b1b2c3d4-e5f6-7890-abcd-ef1234567802",
+      "name": "카테고리/쇼핑몰 설정",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://crawler-api:8000/crawl/mall/{{ $json.endpoint }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ category_id: $json.category_id, category_name: $json.category_name, mall_id: $json.mall_id, keywords: $json.keywords, primary_keyword: $json.primary_keyword, max_items: $json.max_items }) }}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "b1b2c3d4-e5f6-7890-abcd-ef1234567803",
+      "name": "각 쇼핑몰 크롤링",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400]
+    },
+    {
+      "parameters": {
+        "mode": "multiplex"
+      },
+      "id": "b1b2c3d4-e5f6-7890-abcd-ef1234567804",
+      "name": "쇼핑몰 결과 병합",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 전체 쇼핑몰 결과 집계 + 중복 제거\nconst items = $input.all();\nconst seen = new Set();\nconst allProducts = [];\n\nfor (const item of items) {\n  const products = item.json.products || [];\n  for (const p of products) {\n    const key = p.url || `${p.mall_id}:${p.item_id}`;\n    if (!seen.has(key)) {\n      seen.add(key);\n      allProducts.push(p);\n    }\n  }\n}\n\n// 가격순 정렬 (낮은 가격 우선)\nallProducts.sort((a, b) => (a.price || 999999999) - (b.price || 999999999));\n\nconst categoryId = items[0]?.json?.category_id || 'unknown';\nconst categoryName = items[0]?.json?.category_name || '';\n\nreturn [{\n  json: {\n    category_id: categoryId,\n    category_name: categoryName,\n    crawled_at: new Date().toISOString(),\n    total_count: allProducts.length,\n    new_count: items.reduce((s, i) => s + (i.json.new_count || 0), 0),\n    updated_count: items.reduce((s, i) => s + (i.json.updated_count || 0), 0),\n    malls_crawled: items.map(i => i.json.mall_id).filter(Boolean),\n    products: allProducts\n  }\n}];"
+      },
+      "id": "b1b2c3d4-e5f6-7890-abcd-ef1234567805",
+      "name": "결과 집계 및 중복 제거",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://crawler-api:8000/results/save",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 30000 }
+      },
+      "id": "b1b2c3d4-e5f6-7890-abcd-ef1234567806",
+      "name": "결과 DB 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "b1b2c3d4-e5f6-7890-abcd-ef1234567807",
+      "name": "웹훅 응답 반환",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1520, 400]
+    }
+  ],
+  "connections": {
+    "Webhook: 카테고리 크롤 요청": {
+      "main": [
+        [{ "node": "카테고리/쇼핑몰 설정", "type": "main", "index": 0 }]
+      ]
+    },
+    "카테고리/쇼핑몰 설정": {
+      "main": [
+        [{ "node": "각 쇼핑몰 크롤링", "type": "main", "index": 0 }]
+      ]
+    },
+    "각 쇼핑몰 크롤링": {
+      "main": [
+        [{ "node": "쇼핑몰 결과 병합", "type": "main", "index": 0 }]
+      ]
+    },
+    "쇼핑몰 결과 병합": {
+      "main": [
+        [{ "node": "결과 집계 및 중복 제거", "type": "main", "index": 0 }]
+      ]
+    },
+    "결과 집계 및 중복 제거": {
+      "main": [
+        [{ "node": "결과 DB 저장", "type": "main", "index": 0 }]
+      ]
+    },
+    "결과 DB 저장": {
+      "main": [
+        [{ "node": "웹훅 응답 반환", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "tags": ["쇼핑몰", "크롤러", "카테고리"],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

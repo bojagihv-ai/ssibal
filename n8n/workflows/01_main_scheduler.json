@@ -1,0 +1,222 @@
+{
+  "name": "01. 쇼핑몰 크롤러 - 메인 스케줄러",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567801",
+      "name": "매일 오전 6시 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [180, 300],
+      "notes": "기본: 매일 오전 6시. categories.json 의 schedule 필드로 카테고리별 개별 조정 가능"
+    },
+    {
+      "parameters": {
+        "jsCode": "// config/schedules.json 에서 활성화된 카테고리만 반환\nconst categories = [\n  { id: 'fashion',     name: '패션/의류',       schedule: '0 6 * * *',  enabled: true },\n  { id: 'electronics', name: '전자제품/디지털',  schedule: '0 9 * * *',  enabled: true },\n  { id: 'food',        name: '식품/건강',        schedule: '0 7 * * *',  enabled: true },\n  { id: 'beauty',      name: '뷰티/화장품',      schedule: '0 8 * * *',  enabled: true },\n  { id: 'furniture',   name: '가구/인테리어',    schedule: '0 10 * * 1', enabled: true },\n  { id: 'sports',      name: '스포츠/레저',      schedule: '0 10 * * 3', enabled: true },\n  { id: 'baby',        name: '육아/완구',        schedule: '0 11 * * *', enabled: true },\n  { id: 'pet',         name: '반려동물',         schedule: '0 11 * * 5', enabled: true }\n];\n\nreturn categories\n  .filter(c => c.enabled)\n  .map(c => ({ json: c }));"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567802",
+      "name": "활성 카테고리 로드",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://crawler-api:8000/crawl/category/{{ $json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "category_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "category_name",
+              "value": "={{ $json.name }}"
+            },
+            {
+              "name": "max_items_per_mall",
+              "value": "=30"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          }
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567803",
+      "name": "카테고리 크롤 요청",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "mode": "multiplex"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567804",
+      "name": "크롤 결과 병합",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 전체 카테고리 크롤 완료 후 통계 집계\nconst items = $input.all();\nconst summary = {\n  crawled_at: new Date().toISOString(),\n  total_categories: items.length,\n  total_new_items: items.reduce((sum, i) => sum + (i.json.new_count || 0), 0),\n  total_updated_items: items.reduce((sum, i) => sum + (i.json.updated_count || 0), 0),\n  category_results: items.map(i => ({\n    category: i.json.category_name || i.json.category_id,\n    new: i.json.new_count || 0,\n    updated: i.json.updated_count || 0,\n    total: i.json.total_count || 0,\n    malls: i.json.malls_crawled || []\n  }))\n};\n\nreturn [{ json: summary }];"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567805",
+      "name": "일일 통계 집계",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://crawler-api:8000/report/daily",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567806",
+      "name": "일일 리포트 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.total_new_items }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567807",
+      "name": "신규 상품 존재?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1520, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Slack/디스코드/이메일 알림 메시지 생성\nconst data = $input.first().json;\nconst lines = data.category_results\n  .filter(c => c.new > 0)\n  .map(c => `  • ${c.category}: 신규 ${c.new}건 / 업데이트 ${c.updated}건`);\n\nconst message = [\n  `✅ [쇼핑몰 크롤러] ${data.crawled_at.slice(0,10)} 업데이트 완료`,\n  `총 신규 상품: ${data.total_new_items}건`,\n  `총 업데이트: ${data.total_updated_items}건`,\n  ``,\n  `카테고리별:`,\n  ...lines\n].join('\\n');\n\nreturn [{ json: { message, summary: data } }];"
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567808",
+      "name": "알림 메시지 생성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1740, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"text\": \"{{ $json.message }}\" }",
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567809",
+      "name": "Slack 알림 전송",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1960, 200],
+      "notes": "n8n Variables 에서 SLACK_WEBHOOK_URL 설정 필요. 미설정시 이 노드 비활성화"
+    }
+  ],
+  "connections": {
+    "매일 오전 6시 실행": {
+      "main": [
+        [{ "node": "활성 카테고리 로드", "type": "main", "index": 0 }]
+      ]
+    },
+    "활성 카테고리 로드": {
+      "main": [
+        [{ "node": "카테고리 크롤 요청", "type": "main", "index": 0 }]
+      ]
+    },
+    "카테고리 크롤 요청": {
+      "main": [
+        [{ "node": "크롤 결과 병합", "type": "main", "index": 0 }]
+      ]
+    },
+    "크롤 결과 병합": {
+      "main": [
+        [{ "node": "일일 통계 집계", "type": "main", "index": 0 }]
+      ]
+    },
+    "일일 통계 집계": {
+      "main": [
+        [{ "node": "일일 리포트 저장", "type": "main", "index": 0 }]
+      ]
+    },
+    "일일 리포트 저장": {
+      "main": [
+        [{ "node": "신규 상품 존재?", "type": "main", "index": 0 }]
+      ]
+    },
+    "신규 상품 존재?": {
+      "main": [
+        [{ "node": "알림 메시지 생성", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "알림 메시지 생성": {
+      "main": [
+        [{ "node": "Slack 알림 전송", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "tags": ["쇼핑몰", "크롤러", "스케줄러"],
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

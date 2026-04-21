@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY pyproject.toml .
+RUN pip install --no-cache-dir "streamlit>=1.37.0" requests
+
+COPY src/ ./src/
+COPY n8n/server/db.py ./n8n_db.py
+
+EXPOSE 8501
+
+CMD ["streamlit", "run", "src/ui/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
